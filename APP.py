@@ -1,10 +1,42 @@
 import os
 import sys
+import subprocess
+# Lista de librerías externas que requiere tu proyecto (las nativas como os, sys o argparse no se ponen)
+LIBRERIAS_REQUERIDAS = {
+    "psycopg2": "psycopg2-binary",  # Nombre en import : Nombre en pip
+    "colorama": "colorama"
+}
+
+def verificar_e_instalar_librerIAS():
+    """Revisa si las librerías están instaladas; si no, las instala automáticamente"""
+    for import_name, pip_name in LIBRERIAS_REQUERIDAS.items():
+        try:
+            # Intenta importar la librería dinámicamente
+            __import__(import_name)
+        except ImportError:
+            print(f"[!] La librería '{import_name}' no está instalada.")
+            print(f"[+] Instalando '{pip_name}' automáticamente en segundo plano...")
+            try:
+                # Ejecuta 'pip install' usando el mismo ejecutable de Python actual
+                subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
+                print(f"[✔] '{pip_name}' instalada con éxito.\n")
+            except Exception as e:
+                print(f"[❌] Error crítico al intentar instalar {pip_name}: {e}")
+                print("Por favor, instala la librería manualmente usando: pip install " + pip_name)
+                sys.exit(1)
+
+# SE EJECUTA LA VALIDACIÓN ANTES DE CUALQUIER OTRA COSA
+verificar_e_instalar_librerIAS()
+
+
+
+
 import psycopg2
 from psycopg2.extras import DictCursor
 import argparse
 from colorama import init, Fore, Style
  
+ # python -m PyInstaller --onefile --noconsole app.py
 
 init(autoreset=True)
 
