@@ -1,9 +1,11 @@
 import os
 import sys
 import subprocess
-# Lista de librerías externas que requiere tu proyecto (las nativas como os, sys o argparse no se ponen)
+import json
+
+# Lista de librerías externas que requiere tu proyecto
 LIBRERIAS_REQUERIDAS = {
-    "psycopg2": "psycopg2-binary",  # Nombre en import : Nombre en pip
+    "psycopg2": "psycopg2-binary",
     "colorama": "colorama"
 }
 
@@ -11,63 +13,55 @@ def verificar_e_instalar_librerIAS():
     """Revisa si las librerías están instaladas; si no, las instala automáticamente"""
     for import_name, pip_name in LIBRERIAS_REQUERIDAS.items():
         try:
-            # Intenta importar la librería dinámicamente
             __import__(import_name)
         except ImportError:
             print(f"[!] La librería '{import_name}' no está instalada.")
             print(f"[+] Instalando '{pip_name}' automáticamente en segundo plano...")
             try:
-                # Ejecuta 'pip install' usando el mismo ejecutable de Python actual
                 subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
                 print(f"[✔] '{pip_name}' instalada con éxito.\n")
             except Exception as e:
                 print(f"[❌] Error crítico al intentar instalar {pip_name}: {e}")
-                print("Por favor, instala la librería manualmente usando: pip install " + pip_name)
                 sys.exit(1)
 
-# SE EJECUTA LA VALIDACIÓN ANTES DE CUALQUIER OTRA COSA
 verificar_e_instalar_librerIAS()
-
-
-
 
 import psycopg2
 from psycopg2.extras import DictCursor
-import argparse
 from colorama import init, Fore, Style
- 
- # python -m PyInstaller --onefile --noconsole app.py
 
 init(autoreset=True)
 
-# Correos configurados por defecto
-CORREO_DEFAULT_1 = "default@gamil.com."
-CORREO_DEFAULT_2 = "default@gmail.com"
+# -------------------------------------------------------------------------
+# CARGA DE CONFIGURACIÓN SEGURA
+# -------------------------------------------------------------------------
+CONFIG_FILE = "config.json"
 
-# Diccionario con las credenciales de ambos entornos
-ENTORNOS = {
-    "DEV": {
-        "dbname": "",
-        "user": "",
-        "password": "",
-        "host": "",
-        "port": "5432"
-    },
-    "QA": {
-        "dbname": "",
-        "user": "",
-        "password": "",
-        "host": "",  # Cambia por la IP de QA
-        "port": "5432"
-    }
-}
+def cargar_configuracion():
+    if not os.path.exists(CONFIG_FILE):
+        print(Fore.RED + f"[❌] Error crítico: No se encontró el archivo de configuración '{CONFIG_FILE}'.")
+        sys.exit(1)
+        
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        print(Fore.RED + f"[❌] Error al cargar la configuración: {e}")
+        sys.exit(1)
+
+config_datos = cargar_configuracion()
+
+# Variables dinámicas y abstraídas
+CORREO_DEFAULT_1 = config_datos["CORREOS_DEFAULT"]["correo_1"]
+CORREO_DEFAULT_2 = config_datos["CORREOS_DEFAULT"]["correo_2"]
+ENTORNOS = config_datos["ENTORNOS"]
+QUERY_BUSQUEDA = config_datos["QUERIES"]["BUSCAR_VERIFICACION"]
+# -------------------------------------------------------------------------
 
 def limpiar_pantalla():
-    """Limpia la terminal según el sistema operativo (Windows o Linux/Mac)"""
     os.system('cls' if os.name == 'nt' else 'clear')
 
 def menu_interactivo(titulo, opciones):
-    """Genera un menú visualmente limpio en la terminal y valida la entrada"""
     while True:
         limpiar_pantalla()
         print(Fore.GREEN + "=" * 60)
@@ -91,23 +85,17 @@ def conectar_y_consultar(config_db, entorno_nombre, correo_final):
         connection = psycopg2.connect(**config_db, cursor_factory=DictCursor)
         cursor = connection.cursor()
         
-        print(f"{Fore.GREEN} {Style.BRIGHT}[+] Buscando la última verificación para: {correo_final}")
+        print(f"{Fore.GREEN} {Style.BRIGHT}[+] Buscando información para: {correo_final}")
         
-        query = """
-            SELECT * FROM ctl_verificacioncuenta 
-            WHERE nom_correo = %s 
-            ORDER BY fec_expiracion DESC 
-            LIMIT 1;
-        """
-        
-        cursor.execute(query, (correo_final,))
+        # Ejecuta la consulta cargada desde el JSON
+        cursor.execute(QUERY_BUSQUEDA, (correo_final,))
         resultado = cursor.fetchone()
         
         if resultado:
             print(f"{Fore.GREEN} {Style.BRIGHT} \n[✔] Registro encontrado en {entorno_nombre}:")
             print(Fore.GREEN+ "-" * 60)
             for columna, valor in resultado.items():
-                print(f"  {columna}: {valor}")
+                print(f"  {columna}: {valor}")  # Imprime el valor real directamente
             print(Fore.GREEN + "-" * 60)
         else:
             print(f"{Fore.YELLOW} {Style.BRIGHT} \n[⚠️] No se encontró ningún registro para [{correo_final}] en {entorno_nombre}.")
@@ -132,7 +120,7 @@ def ejecutar_consulta_personalizada(config_db, entorno_nombre):
     if nueva_bd:
         config_temporal["dbname"] = nueva_bd
 
-    print("\nEscribe tu consulta SQL completa (ej. SELECT * FROM tabla LIMIT 5):")
+    print("\nEscribe tu consulta SQL completa:")
     query_personalizada = input("SQL > ").strip()
     
     if not query_personalizada:
@@ -156,7 +144,7 @@ def ejecutar_consulta_personalizada(config_db, entorno_nombre):
                 for i, fila in enumerate(resultados, 1):
                     print(f" Registro #{i}:")
                     for columna, valor in fila.items():
-                        print(f"    {columna}: {valor}")
+                        print(f"    {columna}: {valor}")  # Imprime el valor real directamente
                     print("-" * 40)
                 print("-" * 60)
             else:
@@ -204,7 +192,6 @@ def main():
                 opciones_accion
             )
             
-            # Si elige la opción 5, rompe este bucle interno y regresa al menú de entornos
             if opc_accion == 5:
                 break
                 
