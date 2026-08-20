@@ -239,6 +239,9 @@ class DataApp(ctk.CTk):
         variables = re.findall(r'%\((.*?)\)s', template)
         query_final = template
         
+        # --- Asegurar que al seleccionar un Query Guardado se resetee la BD a portalproveedores ---
+        self.combo_db.set("Defecto: portalproveedores")
+        
         if variables:
             # Recupera de forma dinámica los correos del JSON
             lista_correos_json = list(config_datos.get("CORREOS_DEFAULT", {}).values())
@@ -311,7 +314,11 @@ class DataApp(ctk.CTk):
         config_db = ENTORNOS[entorno].copy()
         
         bd_seleccionada = self.combo_db.get()
-        if bd_seleccionada != "-- Usar por defecto --":
+        
+        # --- Mapeo correcto para que reconozca la BD por defecto ---
+        if bd_seleccionada == "Defecto: portalproveedores":
+            config_db["dbname"] = "portalproveedores"
+        else:
             config_db["dbname"] = bd_seleccionada
 
         threading.Thread(target=self.tarea_avanzada, args=(config_db, entorno, query), daemon=True).start()
