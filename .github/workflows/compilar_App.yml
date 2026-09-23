@@ -25,9 +25,9 @@ jobs:
 
     - name: Compilar a .exe
       run: |
-        # Usamos --windowed para ocultar la consola
-        # El archivo de salida se llamará "App.exe"
-        pyinstaller --noconfirm --onefile --windowed --name "App" APP.py
+        # Ejecutamos con 'python -m PyInstaller' para garantizar el mismo entorno de pip
+        # Usamos '--collect-all customtkinter' para empacar los temas y fuentes
+        python -m PyInstaller --noconfirm --onefile --windowed --name "App" --collect-all customtkinter APP.py
 
     - name: Subir archivo a Ejecutables
       env:
