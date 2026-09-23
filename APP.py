@@ -23,12 +23,20 @@ def cargar_configuracion():
 
 config_datos = cargar_configuracion()
 
-CORREO_DEFAULT_1 = config_datos["CORREOS_DEFAULT"]["correo_1"]
-CORREO_DEFAULT_2 = config_datos["CORREOS_DEFAULT"]["correo_2"]
-ENTORNOS = config_datos["ENTORNOS"]
-QUERY_BUSQUEDA = config_datos["QUERIES"]["BUSCAR_VERIFICACION"]
+# --- EXTRACCIÓN SEGURA DE DATOS (Solución al KeyError) ---
+# Si no encuentra la sección, asigna diccionarios vacíos o valores por defecto
+correos_default = config_datos.get("CORREOS_DEFAULT", {})
+CORREO_DEFAULT_1 = correos_default.get("correo_1", "ejemplo1@correo.com")
+CORREO_DEFAULT_2 = correos_default.get("correo_2", "ejemplo2@correo.com")
+
+ENTORNOS = config_datos.get("ENTORNOS", {"DEV": {}, "QA": {}})
+
+queries = config_datos.get("QUERIES", {})
+QUERY_BUSQUEDA = queries.get("BUSCAR_VERIFICACION", "")
+
 QUERIES_GUARDADOS = config_datos.get("QUERIES_GUARDADOS", {})
 BDS_OPCIONALES = config_datos.get("BASES_DE_DATOS_OPCIONALES", [])
+# ---------------------------------------------------------
 
 # =========================================================
 # 3. COLORES Y ESTILOS "DEEP ZINC"
@@ -114,6 +122,8 @@ class DataApp(ctk.CTk):
         ctk.set_appearance_mode("dark")
 
         self.entorno_var = ctk.StringVar(value="DEV")
+        self.correo_default_1 = CORREO_DEFAULT_1
+        self.correo_default_2 = CORREO_DEFAULT_2
         self.construir_interfaz()
 
     def construir_interfaz(self):
@@ -169,17 +179,28 @@ class DataApp(ctk.CTk):
         # Tarjeta 1
         card1 = ctk.CTkFrame(frame_cards, fg_color=BG_APP, corner_radius=10, border_width=1, border_color=BORDER)
         card1.pack(side="left", fill="x", expand=True, padx=(0, 10))
-        ctk.CTkLabel(card1, text=f"👤 Perfil: {self.extraer_nombre(CORREO_DEFAULT_1)}", font=("Segoe UI", 12, "bold"), text_color=TEXT_MUTED).pack(pady=(10, 0))
-        ctk.CTkLabel(card1, text=CORREO_DEFAULT_1, font=("Segoe UI", 13), text_color=ACCENT).pack(pady=(0, 5))
-        ctk.CTkButton(card1, text="⚡ Buscar", fg_color=ACCENT, width=100, height=28, command=lambda: self.iniciar_busqueda(CORREO_DEFAULT_1)).pack(pady=(0, 10))
+        self.lbl_nombre_c1 = ctk.CTkLabel(card1, text=f"👤 Perfil: {self.extraer_nombre(self.correo_default_1)}", font=("Segoe UI", 12, "bold"), text_color=TEXT_MUTED)
+        self.lbl_nombre_c1.pack(pady=(10, 0))
+        self.lbl_correo_c1 = ctk.CTkLabel(card1, text=self.correo_default_1, font=("Segoe UI", 13), text_color=ACCENT)
+        self.lbl_correo_c1.pack(pady=(0, 5))
+        
+        btn_frame1 = ctk.CTkFrame(card1, fg_color="transparent")
+        btn_frame1.pack(pady=(0, 10))
+        ctk.CTkButton(btn_frame1, text="⚡ Buscar", fg_color=ACCENT, width=90, height=28, command=lambda: self.iniciar_busqueda(self.correo_default_1)).pack(side="left", padx=3)
+        ctk.CTkButton(btn_frame1, text="✏️", fg_color=BG_CARD, hover_color=BORDER, width=30, height=28, command=lambda: self.editar_correo(1)).pack(side="left", padx=3)
 
         # Tarjeta 2
         card2 = ctk.CTkFrame(frame_cards, fg_color=BG_APP, corner_radius=10, border_width=1, border_color=BORDER)
         card2.pack(side="left", fill="x", expand=True)
-        ctk.CTkLabel(card2, text=f"👤 Perfil: {self.extraer_nombre(CORREO_DEFAULT_2)}", font=("Segoe UI", 12, "bold"), text_color=TEXT_MUTED).pack(pady=(10, 0))
-        ctk.CTkLabel(card2, text=CORREO_DEFAULT_2, font=("Segoe UI", 13), text_color=ACCENT).pack(pady=(0, 5))
-        ctk.CTkButton(card2, text="⚡ Buscar", fg_color=ACCENT, width=100, height=28, command=lambda: self.iniciar_busqueda(CORREO_DEFAULT_2)).pack(pady=(0, 10))
-
+        self.lbl_nombre_c2 = ctk.CTkLabel(card2, text=f"👤 Perfil: {self.extraer_nombre(self.correo_default_2)}", font=("Segoe UI", 12, "bold"), text_color=TEXT_MUTED)
+        self.lbl_nombre_c2.pack(pady=(10, 0))
+        self.lbl_correo_c2 = ctk.CTkLabel(card2, text=self.correo_default_2, font=("Segoe UI", 13), text_color=ACCENT)
+        self.lbl_correo_c2.pack(pady=(0, 5))
+        
+        btn_frame2 = ctk.CTkFrame(card2, fg_color="transparent")
+        btn_frame2.pack(pady=(0, 10))
+        ctk.CTkButton(btn_frame2, text="⚡ Buscar", fg_color=ACCENT, width=90, height=28, command=lambda: self.iniciar_busqueda(self.correo_default_2)).pack(side="left", padx=3)
+        ctk.CTkButton(btn_frame2, text="✏️", fg_color=BG_CARD, hover_color=BORDER, width=30, height=28, command=lambda: self.editar_correo(2)).pack(side="left", padx=3)
         ctk.CTkFrame(parent, height=2, fg_color=BG_SIDEBAR).pack(fill="x", padx=10, pady=5)
         
         frame_custom = ctk.CTkFrame(parent, fg_color="transparent")
@@ -188,6 +209,41 @@ class DataApp(ctk.CTk):
         self.entry_correo = ctk.CTkEntry(frame_custom, placeholder_text="ejemplo@correo.com", width=250)
         self.entry_correo.pack(side="left", padx=(0, 10))
         ctk.CTkButton(frame_custom, text="Buscar", width=80, command=lambda: self.iniciar_busqueda(self.entry_correo.get())).pack(side="left")
+
+    def editar_correo(self, numero):
+        dialog = ctk.CTkInputDialog(
+            text=f"Ingresa el nuevo correo para el Perfil {numero}:", 
+            title="Editar Correo Guardado"
+        )
+        nuevo_correo = dialog.get_input()
+        
+        if nuevo_correo and nuevo_correo.strip():
+            nuevo_correo = nuevo_correo.strip()
+            global config_datos
+            
+            # Asegurar que la sección existe
+            if "CORREOS_DEFAULT" not in config_datos:
+                config_datos["CORREOS_DEFAULT"] = {}
+                
+            # Actualizar variables de clase e interfaz
+            if numero == 1:
+                self.correo_default_1 = nuevo_correo
+                config_datos["CORREOS_DEFAULT"]["correo_1"] = nuevo_correo
+                self.lbl_nombre_c1.configure(text=f"👤 Perfil: {self.extraer_nombre(nuevo_correo)}")
+                self.lbl_correo_c1.configure(text=nuevo_correo)
+            else:
+                self.correo_default_2 = nuevo_correo
+                config_datos["CORREOS_DEFAULT"]["correo_2"] = nuevo_correo
+                self.lbl_nombre_c2.configure(text=f"👤 Perfil: {self.extraer_nombre(nuevo_correo)}")
+                self.lbl_correo_c2.configure(text=nuevo_correo)
+                
+            # Guardar físicamente en config.json
+            try:
+                with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+                    json.dump(config_datos, f, indent=4, ensure_ascii=False)
+                self.imprimir_consola(f"[✔] Perfil {numero} actualizado y guardado correctamente.", "success")
+            except Exception as e:
+                self.imprimir_consola(f"[❌] Error al guardar en config.json: {e}", "error")
 
     def construir_tab_avanzada(self, parent):
         frame_selectores = ctk.CTkFrame(parent, fg_color="transparent")
