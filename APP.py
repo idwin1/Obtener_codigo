@@ -5,28 +5,6 @@ import json
 import threading
 import re
 from tkinter import messagebox
-
-# =========================================================
-# 1. VERIFICACIÓN E INSTALACIÓN DE LIBRERÍAS
-# =========================================================
-LIBRERIAS_REQUERIDAS = {
-    "psycopg2": "psycopg2-binary",
-    "customtkinter": "customtkinter"
-}
-
-def verificar_e_instalar_librerias():
-    for import_name, pip_name in LIBRERIAS_REQUERIDAS.items():
-        try:
-            __import__(import_name)
-        except ImportError:
-            print(f"[!] Instalando '{pip_name}'...")
-            try:
-                subprocess.check_call([sys.executable, "-m", "pip", "install", pip_name])
-            except Exception as e:
-                sys.exit(1)
-
-verificar_e_instalar_librerias()
-
 import customtkinter as ctk
 import psycopg2
 from psycopg2.extras import DictCursor
